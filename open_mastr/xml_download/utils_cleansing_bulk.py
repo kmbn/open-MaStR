@@ -76,9 +76,23 @@ def replace_mastr_katalogeintraege(
                     .replace("", None)
                 )
             else:
-                df[column_name] = (
-                    df[column_name].astype("float").astype("Int64").map(katalogwerte)
-                )
+                try:
+                    df[column_name] = (
+                        df[column_name].astype("float").astype("Int64").map(katalogwerte)
+                    )
+                except Exception:
+                    # There was a false positive and the values should be processed as 
+                    # strings, not floats.
+                    df[column_name] = (
+                        df[column_name]
+                        .str.split(",", expand=True)
+                        .apply(lambda x: x.str.strip())
+                        .replace("", None)
+                        .astype("Int64")
+                        .map(katalogwerte.get)
+                        .agg(lambda d: ",".join(i for i in d if isinstance(i, str)), axis=1)
+                        .replace("", None)
+                    )
 
     return df
 
