@@ -4,10 +4,14 @@ from collections.abc import Collection, Mapping
 from concurrent.futures import ProcessPoolExecutor, wait
 from io import StringIO
 from multiprocessing import cpu_count
+
 from typing import Any
 from zipfile import ZipFile
 
 import lxml
+from lxml import etree
+import tempfile
+
 import numpy as np
 import pandas as pd
 import sqlalchemy
@@ -377,9 +381,36 @@ def read_xml_file(f: ZipFile, file_name: str) -> pd.DataFrame:
     """Read the xml file from the zip file and return it as a DataFrame."""
     with f.open(file_name) as xml_file:
         try:
-            return pd.read_xml(xml_file, encoding="UTF-16", parser="etree")
-        except lxml.etree.XMLSyntaxError as error:
-            return handle_xml_syntax_error(xml_file.read().decode("utf-16"), error)
+            return pd.read_xml(xml_file, encoding="UTF-16", parser="lxml")
+
+        except Exception:
+            # Try to preprocess with lxml
+            with f.open(file_name) as xml_file:
+                try:
+                    # Parse the XML with recover=True
+                    parser = etree.XMLParser(recover=True, encoding="UTF-16")
+                    tree = etree.parse(xml_file, parser=parser)
+
+                    # Reconstruct the XML string from the parsed tree
+                    cleaned_xml = etree.tostring(tree, encoding="UTF-16", method="xml")
+
+                    # Write the cleaned XML to a temporary file
+                    with tempfile.NamedTemporaryFile(mode="wb", suffix=".xml", delete=False) as temp_file:
+                        temp_path = temp_file.name
+                        temp_file.write(cleaned_xml)
+
+                    # Parse the temporary file with pandas
+                    return pd.read_xml(temp_path, encoding="UTF-16", parser="lxml")
+                except etree.XMLSyntaxError as error:
+                    # Fallback to error handler
+                    xml_file.seek(0)
+                    content = xml_file.read().decode("UTF-16", errors="replace")
+                    return handle_xml_syntax_error(content, error)
+
+                finally:
+                    # Clean up the temporary file
+                    if 'temp_path' in locals() and os.path.exists(temp_path):
+                        os.unlink(temp_path)
 
 
 def add_table_to_non_sqlite_database(
@@ -576,7 +607,7 @@ def handle_xml_syntax_error(data: str, err: lxml.etree.XMLSyntaxError) -> pd.Dat
             log.warning("One invalid xml expression was deleted.")
             df = pd.read_xml(StringIO("\n".join(lines)))
             return df
-        except lxml.etree.XMLSyntaxError as e:
+        except etree.XMLSyntaxError as e:
             err = e
             continue
 
