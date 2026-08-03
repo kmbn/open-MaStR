@@ -67,17 +67,16 @@ API_LOCATION_TYPES = [
 
 # Map bulk data to bulk download tables (XML file names)
 BULK_INCLUDE_TABLES_MAP = {
-    "wind": ["anlageneegwind", "einheitenwind"],
-    "solar": ["anlageneegsolar", "einheitensolar"],
-    "biomass": ["anlageneegbiomasse", "einheitenbiomasse"],
-    "hydro": ["anlageneegwasser", "einheitenwasser"],
+    "wind": ["einheitenwind"],
+    "solar": ["einheitensolar"],
+    "biomass": ["einheitenbiomasse"],
+    "hydro": ["einheitenwasser"],
     "gsgk": [
-        "anlageneeggeothermiegrubengasdruckentspannung",
         "einheitengeothermiegrubengasdruckentspannung",
     ],
-    "combustion": ["anlagenkwk", "einheitenverbrennung"],
+    "combustion": ["einheitenverbrennung"],
     "nuclear": ["einheitenkernkraft"],
-    "storage": ["anlageneegspeicher", "einheitenstromspeicher"],
+    "storage": ["einheitenstromspeicher"],
     "storage_units": ["anlagenstromspeicher"],
     "gas": [
         "anlagengasspeicher",
